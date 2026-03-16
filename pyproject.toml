@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Download Spotify tracks and playlists as MP3 from YouTube"
 requires-python = ">=3.10"
 dependencies = [
+    "mutagen>=1.47.0",
     "spotipy>=2.26.0",
     "yt-dlp>=2026.3.13",
     "python-dotenv>=1.2.2",

@@ -1,0 +1,23 @@
+# Python build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Credentials / secrets
+.env
+
+# Downloaded files
+downloads/
+
+# Editor
+.idea/
+.vscode/
+*.swp

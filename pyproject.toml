@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zhuk"
+version = "0.1.0"
+description = "Download Spotify tracks and playlists as MP3 from YouTube"
+requires-python = ">=3.10"
+dependencies = [
+    "spotipy>=2.26.0",
+    "yt-dlp>=2026.3.13",
+    "python-dotenv>=1.2.2",
+]
+
+[project.scripts]
+zhuk = "zhuk.main:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-mock>=3.14",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["zhuk*"]

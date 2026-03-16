@@ -5,13 +5,14 @@ A command-line tool that downloads Spotify tracks and playlists as MP3 files fro
 ## Requirements
 
 - Python ≥ 3.10
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) (build tool and package manager)
 - [FFmpeg](https://ffmpeg.org/download.html) installed and on your `PATH` (used by yt-dlp for audio conversion)
 - A [Spotify Developer](https://developer.spotify.com/dashboard) application (free) to obtain API credentials
 
 ## Installation
 
 ```bash
-pip install -e .
+uv sync
 ```
 
 ## Configuration
@@ -64,6 +65,6 @@ MP3 files are saved to the `downloads/` directory by default.
 ## Development
 
 ```bash
-pip install -e ".[dev]"
-python -m pytest tests/ -v
+uv sync --dev
+uv run pytest tests/ -v
 ```

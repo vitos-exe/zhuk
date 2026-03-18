@@ -18,6 +18,7 @@ class TrackInfo:
 
     title: str
     artist: str
+    album: str = ""
 
     def search_query(self) -> str:
         """Return a YouTube search query for this track."""
@@ -44,7 +45,8 @@ def get_track(url: str) -> TrackInfo:
     data = sp.track(url)
     title = data["name"]
     artist = data["artists"][0]["name"]
-    return TrackInfo(title=title, artist=artist)
+    album = data["album"]["name"]
+    return TrackInfo(title=title, artist=artist, album=album)
 
 
 def get_playlist(url: str) -> list[TrackInfo]:
@@ -60,7 +62,8 @@ def get_playlist(url: str) -> list[TrackInfo]:
                 continue
             title = track["name"]
             artist = track["artists"][0]["name"]
-            tracks.append(TrackInfo(title=title, artist=artist))
+            album = track["album"]["name"]
+            tracks.append(TrackInfo(title=title, artist=artist, album=album))
         results = sp.next(results) if results.get("next") else None
 
     return tracks

@@ -13,9 +13,14 @@ class TestTrackInfo:
         assert track.search_query() == "Queen - Bohemian Rhapsody"
 
     def test_dataclass_fields(self):
-        track = TrackInfo(title="Song", artist="Artist")
+        track = TrackInfo(title="Song", artist="Artist", album="Album")
         assert track.title == "Song"
         assert track.artist == "Artist"
+        assert track.album == "Album"
+
+    def test_album_defaults_to_empty_string(self):
+        track = TrackInfo(title="Song", artist="Artist")
+        assert track.album == ""
 
 
 class TestGetTrack:
@@ -23,6 +28,7 @@ class TestGetTrack:
         return {
             "name": "Bohemian Rhapsody",
             "artists": [{"name": "Queen"}],
+            "album": {"name": "A Night at the Opera"},
         }
 
     @patch("zhuk.spotify._build_client")
@@ -35,6 +41,7 @@ class TestGetTrack:
 
         assert track.title == "Bohemian Rhapsody"
         assert track.artist == "Queen"
+        assert track.album == "A Night at the Opera"
         mock_sp.track.assert_called_once_with("https://open.spotify.com/track/abc123")
 
     @patch("zhuk.spotify._build_client")
@@ -43,6 +50,7 @@ class TestGetTrack:
         mock_sp.track.return_value = {
             "name": "Track",
             "artists": [{"name": "FirstArtist"}, {"name": "SecondArtist"}],
+            "album": {"name": "Some Album"},
         }
         mock_build.return_value = mock_sp
 
@@ -54,7 +62,13 @@ class TestGetTrack:
 class TestGetPlaylist:
     def _make_page(self, track_names, next_url=None):
         items = [
-            {"track": {"name": name, "artists": [{"name": f"Artist{i}"}]}}
+            {
+                "track": {
+                    "name": name,
+                    "artists": [{"name": f"Artist{i}"}],
+                    "album": {"name": f"Album{i}"},
+                }
+            }
             for i, name in enumerate(track_names)
         ]
         return {"items": items, "next": next_url}
@@ -71,6 +85,8 @@ class TestGetPlaylist:
         assert len(tracks) == 2
         assert tracks[0].title == "Song A"
         assert tracks[1].title == "Song B"
+        assert tracks[0].album == "Album0"
+        assert tracks[1].album == "Album1"
 
     @patch("zhuk.spotify._build_client")
     def test_skips_null_tracks(self, mock_build):
@@ -78,7 +94,13 @@ class TestGetPlaylist:
         mock_sp.playlist_tracks.return_value = {
             "items": [
                 {"track": None},
-                {"track": {"name": "Real Song", "artists": [{"name": "Artist"}]}},
+                {
+                    "track": {
+                        "name": "Real Song",
+                        "artists": [{"name": "Artist"}],
+                        "album": {"name": "Real Album"},
+                    }
+                },
             ],
             "next": None,
         }
@@ -89,6 +111,7 @@ class TestGetPlaylist:
 
         assert len(tracks) == 1
         assert tracks[0].title == "Real Song"
+        assert tracks[0].album == "Real Album"
 
     @patch("zhuk.spotify._build_client")
     def test_multiple_pages(self, mock_build):

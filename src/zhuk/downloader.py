@@ -12,7 +12,7 @@ from zhuk.spotify import TrackInfo
 _DEFAULT_OUTPUT_DIR = "downloads"
 
 
-def _write_id3_tags(mp3_path: str, track: TrackInfo) -> None:
+def write_id3_tags(mp3_path: str, track: TrackInfo) -> None:
     """Embed ID3 title, artist and album tags into an MP3 file."""
     try:
         tags = mutagen.id3.ID3(mp3_path)
@@ -47,7 +47,7 @@ def download_track(track: TrackInfo, output_dir: str = _DEFAULT_OUTPUT_DIR) -> s
 
     output_template = os.path.join(output_dir, "%(title)s.%(ext)s")
 
-    ydl_opts: dict = {
+    ydl_opts = {
         "format": "bestaudio/best",
         "outtmpl": output_template,
         "quiet": True,
@@ -74,7 +74,7 @@ def download_track(track: TrackInfo, output_dir: str = _DEFAULT_OUTPUT_DIR) -> s
         mp3_path = base + ".mp3"
 
     mp3_path = os.path.abspath(mp3_path)
-    _write_id3_tags(mp3_path, track)
+    write_id3_tags(mp3_path, track)
     return mp3_path
 
 

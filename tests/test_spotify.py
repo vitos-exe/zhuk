@@ -133,7 +133,7 @@ class TestBuildClient:
         monkeypatch.delenv("SPOTIPY_CLIENT_ID", raising=False)
         monkeypatch.delenv("SPOTIPY_CLIENT_SECRET", raising=False)
 
-        from zhuk.spotify import _build_client
+        from zhuk.spotify import build_client
 
         with pytest.raises(EnvironmentError, match="SPOTIPY_CLIENT_ID"):
-            _build_client()
+            build_client()

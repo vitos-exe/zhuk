@@ -8,8 +8,8 @@ import sys
 from zhuk.downloader import download_track, download_tracks
 from zhuk.spotify import get_playlist, get_track
 
-_TRACK_URL_HINT = "open.spotify.com/track/"
-_PLAYLIST_URL_HINT = "open.spotify.com/playlist/"
+TRACK_URL_HINT = "open.spotify.com/track/"
+PLAYLIST_URL_HINT = "open.spotify.com/playlist/"
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -33,16 +33,17 @@ def main(argv: list[str] | None = None) -> None:
     url: str = args.url
     output_dir: str = args.output
 
-    if _PLAYLIST_URL_HINT in url:
+    if PLAYLIST_URL_HINT in url:
         print(f"Fetching playlist from Spotify…")
         tracks = get_playlist(url)
         print(f"Found {len(tracks)} track(s). Starting download…")
         paths = download_tracks(tracks, output_dir=output_dir)
         for path in paths:
             print(f"  ✓ {path}")
-    elif _TRACK_URL_HINT in url:
+    elif TRACK_URL_HINT in url:
         print(f"Fetching track from Spotify…")
         track = get_track(url)
+        assert track is not None
         print(f"Downloading: {track.search_query()}")
         path = download_track(track, output_dir=output_dir)
         print(f"  ✓ {path}")

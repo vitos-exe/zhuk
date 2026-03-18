@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, call, patch
 
 import mutagen.id3
 
-from zhuk.downloader import download_track, download_tracks, _write_id3_tags
+from zhuk.downloader import download_track, download_tracks, write_id3_tags
 from zhuk.spotify import TrackInfo
 
 
@@ -17,7 +17,7 @@ class TestWriteId3Tags:
         tags.save(mp3_path)
 
         track = TrackInfo(title="Bohemian Rhapsody", artist="Queen", album="A Night at the Opera")
-        _write_id3_tags(mp3_path, track)
+        write_id3_tags(mp3_path, track)
 
         saved = mutagen.id3.ID3(mp3_path)
         assert str(saved["TIT2"]) == "Bohemian Rhapsody"
@@ -30,7 +30,7 @@ class TestWriteId3Tags:
         tags.save(mp3_path)
 
         track = TrackInfo(title="Song", artist="Artist")
-        _write_id3_tags(mp3_path, track)
+        write_id3_tags(mp3_path, track)
 
         saved = mutagen.id3.ID3(mp3_path)
         assert str(saved["TIT2"]) == "Song"
@@ -44,7 +44,7 @@ class TestWriteId3Tags:
         mp3_path_obj.write_bytes(b"\xff\xfb\x90\x00" * 10)
 
         track = TrackInfo(title="Song", artist="Artist", album="Album")
-        _write_id3_tags(str(mp3_path_obj), track)
+        write_id3_tags(str(mp3_path_obj), track)
 
         saved = mutagen.id3.ID3(str(mp3_path_obj))
         assert str(saved["TIT2"]) == "Song"

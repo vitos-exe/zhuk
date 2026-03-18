@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 
 import spotipy
@@ -25,24 +24,26 @@ class TrackInfo:
         return f"{self.artist} - {self.title}"
 
 
-def _build_client() -> spotipy.Spotify:
+def build_client() -> spotipy.Spotify:
     auth_manager = SpotifyOAuth(scope=["playlist-read-private", "playlist-read-collaborative"])
     return spotipy.Spotify(auth_manager=auth_manager)
 
 
-def get_track(url: str) -> TrackInfo:
+def get_track(url: str) -> TrackInfo | None:
     """Return :class:`TrackInfo` for a Spotify track URL."""
-    sp = _build_client()
+    sp = build_client()
     data = sp.track(url)
-    title = data["name"]
-    artist = data["artists"][0]["name"]
-    album = data["album"]["name"]
-    return TrackInfo(title=title, artist=artist, album=album)
+    if data is not None:
+        title = data["name"]
+        artist = data["artists"][0]["name"]
+        album = data["album"]["name"]
+        return TrackInfo(title=title, artist=artist, album=album)
+    return None
 
 
 def get_playlist(url: str) -> list[TrackInfo]:
     """Return a list of :class:`TrackInfo` for every track in a Spotify playlist."""
-    sp = _build_client()
+    sp = build_client()
     tracks: list[TrackInfo] = []
 
     results = sp.playlist_tracks(url)

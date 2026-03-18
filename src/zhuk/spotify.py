@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 import spotipy
 from dotenv import load_dotenv
-from spotipy.oauth2 import SpotifyClientCredentials
+from spotipy.oauth2 import SpotifyOAuth
 
 load_dotenv()
 
@@ -26,16 +26,7 @@ class TrackInfo:
 
 
 def _build_client() -> spotipy.Spotify:
-    client_id = os.environ.get("SPOTIPY_CLIENT_ID")
-    client_secret = os.environ.get("SPOTIPY_CLIENT_SECRET")
-    if not client_id or not client_secret:
-        raise EnvironmentError(
-            "SPOTIPY_CLIENT_ID and SPOTIPY_CLIENT_SECRET must be set. "
-            "Copy .env.example to .env and fill in your credentials."
-        )
-    auth_manager = SpotifyClientCredentials(
-        client_id=client_id, client_secret=client_secret
-    )
+    auth_manager = SpotifyOAuth(scope=["playlist-read-private", "playlist-read-collaborative"])
     return spotipy.Spotify(auth_manager=auth_manager)
 
 
@@ -57,7 +48,7 @@ def get_playlist(url: str) -> list[TrackInfo]:
     results = sp.playlist_tracks(url)
     while results:
         for item in results["items"]:
-            track = item.get("track")
+            track = item.get("item")
             if track is None:
                 continue
             title = track["name"]

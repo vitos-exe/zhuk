@@ -21,3 +21,6 @@ downloads/
 .idea/
 .vscode/
 *.swp
+
+# Other
+.cache

@@ -6,6 +6,7 @@ import argparse
 import sys
 
 from zhuk.downloader import download_track, download_tracks
+from zhuk.matcher import find_missing_tracks
 from zhuk.spotify import get_playlist, get_track
 
 TRACK_URL_HINT = "open.spotify.com/track/"
@@ -28,25 +29,61 @@ def main(argv: list[str] | None = None) -> None:
         metavar="DIR",
         help="Directory to save MP3 files (default: downloads)",
     )
+    parser.add_argument(
+        "--sync",
+        action="store_true",
+        help="Sync mode: only download tracks not already present locally",
+    )
     args = parser.parse_args(argv)
 
     url: str = args.url
     output_dir: str = args.output
+    sync_mode: bool = args.sync
 
     if PLAYLIST_URL_HINT in url:
         print(f"Fetching playlist from Spotify…")
         tracks = get_playlist(url)
-        print(f"Found {len(tracks)} track(s). Starting download…")
-        paths = download_tracks(tracks, output_dir=output_dir)
-        for path in paths:
-            print(f"  ✓ {path}")
+        print(f"Found {len(tracks)} track(s) in playlist.")
+        
+        if sync_mode:
+            print(f"Scanning {output_dir} for existing tracks…")
+            missing_tracks, matched_tracks = find_missing_tracks(tracks, output_dir, threshold=90)
+            
+            print(f"  ✓ {len(matched_tracks)} track(s) already present")
+            print(f"  → {len(missing_tracks)} track(s) to download")
+            
+            if missing_tracks:
+                print(f"Starting download…")
+                paths = download_tracks(missing_tracks, output_dir=output_dir)
+                for path in paths:
+                    print(f"  ✓ {path}")
+            else:
+                print("All tracks are already present. Nothing to download.")
+        else:
+            print(f"Starting download…")
+            paths = download_tracks(tracks, output_dir=output_dir)
+            for path in paths:
+                print(f"  ✓ {path}")
     elif TRACK_URL_HINT in url:
         print(f"Fetching track from Spotify…")
         track = get_track(url)
         assert track is not None
-        print(f"Downloading: {track.search_query()}")
-        path = download_track(track, output_dir=output_dir)
-        print(f"  ✓ {path}")
+        
+        if sync_mode:
+            print(f"Scanning {output_dir} for existing tracks…")
+            missing_tracks, matched_tracks = find_missing_tracks([track], output_dir, threshold=90)
+            
+            if matched_tracks:
+                print(f"  ✓ Track already present: {matched_tracks[0][1].filepath}")
+                print("Nothing to download.")
+            else:
+                print(f"Downloading: {track.search_query()}")
+                path = download_track(track, output_dir=output_dir)
+                print(f"  ✓ {path}")
+        else:
+            print(f"Downloading: {track.search_query()}")
+            path = download_track(track, output_dir=output_dir)
+            print(f"  ✓ {path}")
     else:
         print(
             "Error: URL must be a Spotify track or playlist URL.\n"

@@ -33,7 +33,7 @@ You can create a free Spotify application at <https://developer.spotify.com/dash
 ## Usage
 
 ```
-zhuk <spotify-url> [--output DIR]
+zhuk <spotify-url> [--output DIR] [--sync]
 ```
 
 ### Download a single track
@@ -53,6 +53,22 @@ zhuk https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
 ```bash
 zhuk https://open.spotify.com/track/4u7EnebtmKWzUH433cf5Qv --output ~/Music
 ```
+
+### Sync mode - only download missing tracks
+
+Use `--sync` to check what's already in your local directory and only download tracks that aren't present:
+
+```bash
+zhuk https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M --output ~/Music --sync
+```
+
+In sync mode, zhuk:
+- Scans the output directory for existing MP3 files
+- Reads ID3 tags (artist and title) from each MP3
+- Uses fuzzy matching (90% similarity) to identify which tracks are already present
+- Only downloads tracks that aren't found locally
+
+This is useful for keeping playlists up to date without re-downloading everything.
 
 MP3 files are saved to the `downloads/` directory by default.
 

@@ -84,3 +84,27 @@ MP3 files are saved to the `downloads/` directory by default.
 uv sync --dev
 uv run pytest tests/ -v
 ```
+
+## Publishing to PyPI
+
+The repository includes a GitHub Actions workflow (`.github/workflows/publish.yml`) that automatically builds and publishes the package to PyPI on every push to the `main` branch.
+
+### One-time setup: configure a PyPI Trusted Publisher
+
+This workflow uses [PyPI Trusted Publishing](https://docs.pypi.org/trusted-publishers/) (OIDC) — no API tokens are stored in GitHub.
+
+1. Log in to <https://pypi.org> and go to your account → *Publishing*.
+2. Under **Add a new pending publisher**, fill in:
+   - **PyPI project name**: `zhuk`
+   - **Owner**: `vitos-exe` (your GitHub user/org)
+   - **Repository**: `zhuk`
+   - **Workflow name**: `publish.yml`
+   - **Environment name**: `pypi`
+3. Save the pending publisher.
+4. In your GitHub repository go to **Settings → Environments** and create an environment named **`pypi`**. Add any required protection rules (e.g. require a reviewer before deploying).
+
+### Publishing a new version
+
+1. Bump the `version` field in `pyproject.toml`.
+2. Commit and push to `main`.
+3. The *Publish to PyPI* workflow will trigger automatically and upload the built distributions to PyPI.

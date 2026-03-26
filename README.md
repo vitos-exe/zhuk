@@ -87,7 +87,7 @@ uv run pytest tests/ -v
 
 ## Publishing to PyPI
 
-The repository includes a GitHub Actions workflow (`.github/workflows/publish.yml`) that automatically builds and publishes the package to PyPI whenever a GitHub Release is published.
+The repository includes a GitHub Actions workflow (`.github/workflows/publish.yml`) that automatically builds and publishes the package to PyPI on every push to the `main` branch.
 
 ### One-time setup: configure a PyPI Trusted Publisher
 
@@ -103,9 +103,8 @@ This workflow uses [PyPI Trusted Publishing](https://docs.pypi.org/trusted-publi
 3. Save the pending publisher.
 4. In your GitHub repository go to **Settings → Environments** and create an environment named **`pypi`**. Add any required protection rules (e.g. require a reviewer before deploying).
 
-### Releasing a new version
+### Publishing a new version
 
 1. Bump the `version` field in `pyproject.toml`.
-2. Commit and push the change.
-3. Create a GitHub Release (tag the commit, e.g. `v0.2.0`, and publish the release).
-4. The *Publish to PyPI* workflow will trigger automatically and upload the built distributions to PyPI.
+2. Commit and push to `main`.
+3. The *Publish to PyPI* workflow will trigger automatically and upload the built distributions to PyPI.

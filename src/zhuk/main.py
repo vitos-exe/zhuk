@@ -34,11 +34,19 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Sync mode: only download tracks not already present locally",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=4,
+        metavar="N",
+        help="Number of parallel download workers (default: 4)",
+    )
     args = parser.parse_args(argv)
 
     url: str = args.url
     output_dir: str = args.output
     sync_mode: bool = args.sync
+    max_workers: int = args.workers
 
     if PLAYLIST_URL_HINT in url:
         print(f"Fetching playlist from Spotify…")
@@ -54,14 +62,14 @@ def main(argv: list[str] | None = None) -> None:
             
             if missing_tracks:
                 print(f"Starting download…")
-                paths = download_tracks(missing_tracks, output_dir=output_dir)
+                paths = download_tracks(missing_tracks, output_dir=output_dir, max_workers=max_workers)
                 for path in paths:
                     print(f"  ✓ {path}")
             else:
                 print("All tracks are already present. Nothing to download.")
         else:
             print(f"Starting download…")
-            paths = download_tracks(tracks, output_dir=output_dir)
+            paths = download_tracks(tracks, output_dir=output_dir, max_workers=max_workers)
             for path in paths:
                 print(f"  ✓ {path}")
     elif TRACK_URL_HINT in url:

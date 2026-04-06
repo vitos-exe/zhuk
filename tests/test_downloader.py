@@ -166,13 +166,36 @@ class TestDownloadTracks:
 
         paths = download_tracks(tracks, output_dir=str(tmp_path))
 
-        assert paths == ["/out/Song A.mp3", "/out/Song B.mp3"]
+        assert set(paths) == {"/out/Song A.mp3", "/out/Song B.mp3"}
         assert mock_download_track.call_count == 2
         mock_download_track.assert_any_call(tracks[0], output_dir=str(tmp_path))
         mock_download_track.assert_any_call(tracks[1], output_dir=str(tmp_path))
+
+    @patch("zhuk.downloader.download_track")
+    def test_preserves_order(self, mock_download_track, tmp_path):
+        tracks = [
+            TrackInfo(title=f"Song {i}", artist="Artist")
+            for i in range(6)
+        ]
+        expected = [f"/out/Song {i}.mp3" for i in range(6)]
+        mock_download_track.side_effect = expected[:]
+
+        paths = download_tracks(tracks, output_dir=str(tmp_path), max_workers=3)
+
+        assert paths == expected
 
     @patch("zhuk.downloader.download_track")
     def test_empty_list(self, mock_download_track, tmp_path):
         paths = download_tracks([], output_dir=str(tmp_path))
         assert paths == []
         mock_download_track.assert_not_called()
+
+    @patch("zhuk.downloader.download_track")
+    def test_respects_max_workers(self, mock_download_track, tmp_path):
+        tracks = [TrackInfo(title=f"Song {i}", artist="Artist") for i in range(4)]
+        mock_download_track.side_effect = [f"/out/Song {i}.mp3" for i in range(4)]
+
+        paths = download_tracks(tracks, output_dir=str(tmp_path), max_workers=2)
+
+        assert mock_download_track.call_count == 4
+        assert len(paths) == 4

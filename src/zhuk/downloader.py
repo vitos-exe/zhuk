@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import mutagen.id3
 import yt_dlp
@@ -12,7 +13,7 @@ from zhuk.spotify import TrackInfo
 _DEFAULT_OUTPUT_DIR = "downloads"
 
 
-def write_id3_tags(mp3_path: str, track: TrackInfo) -> None:
+def _write_id3_tags(mp3_path: str, track: TrackInfo) -> None:
     """Embed ID3 title, artist and album tags into an MP3 file."""
     try:
         tags = mutagen.id3.ID3(mp3_path)
@@ -25,6 +26,10 @@ def write_id3_tags(mp3_path: str, track: TrackInfo) -> None:
         tags["TALB"] = mutagen.id3.TALB(encoding=3, text=track.album)
 
     tags.save(mp3_path)
+
+
+# Public alias kept for backwards compatibility
+write_id3_tags = _write_id3_tags
 
 
 def download_track(track: TrackInfo, output_dir: str = _DEFAULT_OUTPUT_DIR) -> str:
@@ -74,16 +79,43 @@ def download_track(track: TrackInfo, output_dir: str = _DEFAULT_OUTPUT_DIR) -> s
         mp3_path = base + ".mp3"
 
     mp3_path = os.path.abspath(mp3_path)
-    write_id3_tags(mp3_path, track)
+    _write_id3_tags(mp3_path, track)
     return mp3_path
 
 
 def download_tracks(
-    tracks: list[TrackInfo], output_dir: str = _DEFAULT_OUTPUT_DIR
+    tracks: list[TrackInfo],
+    output_dir: str = _DEFAULT_OUTPUT_DIR,
+    max_workers: int = 4,
 ) -> list[str]:
-    """Download each track in *tracks* and return their MP3 paths."""
-    paths: list[str] = []
-    for track in tracks:
-        path = download_track(track, output_dir=output_dir)
-        paths.append(path)
-    return paths
+    """Download *tracks* in parallel and return their MP3 paths.
+
+    Parameters
+    ----------
+    tracks:
+        List of tracks to download.
+    output_dir:
+        Directory where MP3 files will be saved.
+    max_workers:
+        Maximum number of concurrent downloads.
+
+    Returns
+    -------
+    list[str]
+        Absolute paths to the downloaded MP3 files, in the same order as
+        *tracks*.
+    """
+    if not tracks:
+        return []
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(download_track, track, output_dir=output_dir): i
+            for i, track in enumerate(tracks)
+        }
+        results: list[str | None] = [None] * len(tracks)
+        for future in as_completed(futures):
+            idx = futures[future]
+            results[idx] = future.result()
+
+    return results  # type: ignore[return-value]

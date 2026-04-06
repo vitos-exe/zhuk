@@ -166,7 +166,7 @@ class TestDownloadTracks:
 
         paths = download_tracks(tracks, output_dir=str(tmp_path))
 
-        assert set(paths) == {"/out/Song A.mp3", "/out/Song B.mp3"}
+        assert paths == ["/out/Song A.mp3", "/out/Song B.mp3"]
         assert mock_download_track.call_count == 2
         mock_download_track.assert_any_call(tracks[0], output_dir=str(tmp_path))
         mock_download_track.assert_any_call(tracks[1], output_dir=str(tmp_path))

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import cast
 
 import mutagen.id3
 import yt_dlp
@@ -118,4 +119,4 @@ def download_tracks(
             idx = futures[future]
             results[idx] = future.result()
 
-    return results  # type: ignore[return-value]
+    return cast(list[str], results)

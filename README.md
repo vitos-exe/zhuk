@@ -91,6 +91,10 @@ This workflow uses [PyPI Trusted Publishing](https://docs.pypi.org/trusted-publi
 
 ### Publishing a new version
 
-1. Bump the `version` field in `pyproject.toml`.
-2. Commit and push to `main`.
-3. The *Publish to PyPI* workflow will trigger automatically and upload the built distributions to PyPI.
+1. Bump the `version` field in `pyproject.toml`, commit, and push to `main`.
+2. Tag the release and push the tag:
+   ```bash
+   git tag v1.2.0
+   git push origin v1.2.0
+   ```
+3. The *Publish to PyPI* workflow triggers on the tag and uploads the built distributions to PyPI.

@@ -27,7 +27,7 @@ export SPOTIPY_REDIRECT_URI=your_spotify_redirect_uri
 Or pass the client ID directly via the CLI:
 
 ```bash
-zhuk --client-id your_spotify_client_id download <url>
+zhuk --client-id your_spotify_client_id --redirect-uri your_redirect_uri download <url>
 ```
 
 You can create a free Spotify application at <https://developer.spotify.com/dashboard>.

@@ -21,14 +21,14 @@ class TrackInfo:
         return f"{self.artist} - {self.title}"
 
 
-def build_client(client_id: str | None = None) -> spotipy.Spotify:
-    auth_manager = SpotifyPKCE(client_id=client_id, scope=["playlist-read-private", "playlist-read-collaborative"])
+def build_client(client_id: str | None = None, redirect_uri: str | None = None) -> spotipy.Spotify:
+    auth_manager = SpotifyPKCE(client_id=client_id, redirect_uri=redirect_uri, scope=["playlist-read-private", "playlist-read-collaborative"])
     return spotipy.Spotify(auth_manager=auth_manager)
 
 
-def get_track(url: str, client_id: str | None = None) -> TrackInfo | None:
+def get_track(url: str, client_id: str | None = None, redirect_uri: str | None = None) -> TrackInfo | None:
     """Return :class:`TrackInfo` for a Spotify track URL."""
-    sp = build_client(client_id)
+    sp = build_client(client_id, redirect_uri)
     data = sp.track(url)
     if data is not None:
         title = data["name"]
@@ -38,9 +38,9 @@ def get_track(url: str, client_id: str | None = None) -> TrackInfo | None:
     return None
 
 
-def get_playlist(url: str, client_id: str | None = None) -> list[TrackInfo]:
+def get_playlist(url: str, client_id: str | None = None, redirect_uri: str | None = None) -> list[TrackInfo]:
     """Return a list of :class:`TrackInfo` for every track in a Spotify playlist."""
-    sp = build_client(client_id)
+    sp = build_client(client_id, redirect_uri)
     tracks: list[TrackInfo] = []
 
     results = sp.playlist_tracks(url)

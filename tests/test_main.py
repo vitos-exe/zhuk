@@ -19,7 +19,7 @@ class TestMainCLI:
         runner = CliRunner()
         runner.invoke(cli, ['download', 'https://open.spotify.com/track/abc123'])
 
-        mock_get_track.assert_called_once_with("https://open.spotify.com/track/abc123")
+        mock_get_track.assert_called_once_with("https://open.spotify.com/track/abc123", client_id=None, redirect_uri=None)
         mock_download.assert_called_once()
 
     @patch("zhuk.main.get_playlist")
@@ -37,7 +37,7 @@ class TestMainCLI:
         runner.invoke(cli, ['download', 'https://open.spotify.com/playlist/pl123'])
 
         mock_get_playlist.assert_called_once_with(
-            "https://open.spotify.com/playlist/pl123"
+            "https://open.spotify.com/playlist/pl123", client_id=None, redirect_uri=None
         )
         mock_download.assert_called_once()
 

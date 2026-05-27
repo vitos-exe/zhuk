@@ -10,10 +10,12 @@ PLAYLIST_URL_HINT = "open.spotify.com/playlist/"
 
 @click.group()
 @click.option('--client-id', envvar='SPOTIPY_CLIENT_ID', help='Spotify client ID')
+@click.option('--redirect-uri', envvar='SPOTIPY_REDIRECT_URI', help='Spotify redirect URI')
 @click.pass_context
-def cli(ctx, client_id):
+def cli(ctx, client_id, redirect_uri):
     ctx.ensure_object(dict)
     ctx.obj['client_id'] = client_id
+    ctx.obj['redirect_uri'] = redirect_uri
 
 @click.command()
 @click.argument('url')
@@ -30,16 +32,17 @@ def download(ctx, url, output):
     Download a Spotify track or playlist via URL as MP3 from YouTube
     """
     client_id = ctx.obj.get('client_id')
+    redirect_uri = ctx.obj.get('redirect_uri')
     if TRACK_URL_HINT in url:
         print(f"Fetching track from Spotify…")
-        track = get_track(url, client_id=client_id)
+        track = get_track(url, client_id=client_id, redirect_uri=redirect_uri)
         assert track is not None
         print(f"Downloading: {track.search_query()}")
         path = download_track(track, output_dir=output)
         print(f"  ✓ {path}")
     elif PLAYLIST_URL_HINT in url:
         print(f"Fetching playlist from Spotify…")
-        tracks = get_playlist(url, client_id=client_id)
+        tracks = get_playlist(url, client_id=client_id, redirect_uri=redirect_uri)
         print(f"Found {len(tracks)} track(s) in playlist.")
         print(f"Starting download…")
         paths = download_tracks(tracks, output_dir=output)

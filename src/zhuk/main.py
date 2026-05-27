@@ -1,12 +1,14 @@
-from pathlib import Path
-import click
 import sys
+from pathlib import Path
+
+import click
 
 from zhuk.downloader import download_track, download_tracks
 from zhuk.spotify import get_playlist, get_track
 
 TRACK_URL_HINT = "open.spotify.com/track/"
 PLAYLIST_URL_HINT = "open.spotify.com/playlist/"
+
 
 @click.group()
 @click.option('--client-id', envvar='SPOTIPY_CLIENT_ID', help='Spotify client ID')
@@ -16,6 +18,7 @@ def cli(ctx, client_id, redirect_uri):
     ctx.ensure_object(dict)
     ctx.obj['client_id'] = client_id
     ctx.obj['redirect_uri'] = redirect_uri
+
 
 @click.command()
 @click.argument('url')
@@ -34,17 +37,17 @@ def download(ctx, url, output):
     client_id = ctx.obj.get('client_id')
     redirect_uri = ctx.obj.get('redirect_uri')
     if TRACK_URL_HINT in url:
-        print(f"Fetching track from Spotify…")
+        print("Fetching track from Spotify…")
         track = get_track(url, client_id=client_id, redirect_uri=redirect_uri)
         assert track is not None
         print(f"Downloading: {track.search_query()}")
         path = download_track(track, output_dir=output)
         print(f"  ✓ {path}")
     elif PLAYLIST_URL_HINT in url:
-        print(f"Fetching playlist from Spotify…")
+        print("Fetching playlist from Spotify…")
         tracks = get_playlist(url, client_id=client_id, redirect_uri=redirect_uri)
         print(f"Found {len(tracks)} track(s) in playlist.")
-        print(f"Starting download…")
+        print("Starting download…")
         paths = download_tracks(tracks, output_dir=output)
         for path in paths:
             print(f"  ✓ {path}")

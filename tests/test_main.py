@@ -2,17 +2,17 @@
 
 import os
 from unittest.mock import patch
+
 from click.testing import CliRunner
 
 from zhuk.main import cli
+from zhuk.spotify import TrackInfo
 
 
 class TestMainCLI:
     @patch("zhuk.main.get_track")
     @patch("zhuk.main.download_track")
     def test_track_url_downloads_single_track(self, mock_download, mock_get_track):
-        from zhuk.spotify import TrackInfo
-
         mock_get_track.return_value = TrackInfo(title="Song", artist="Artist")
         mock_download.return_value = "/downloads/Song.mp3"
         
@@ -25,8 +25,6 @@ class TestMainCLI:
     @patch("zhuk.main.get_playlist")
     @patch("zhuk.main.download_tracks")
     def test_playlist_url_downloads_all_tracks(self, mock_download, mock_get_playlist):
-        from zhuk.spotify import TrackInfo
-
         mock_get_playlist.return_value = [
             TrackInfo(title="Song A", artist="A"),
             TrackInfo(title="Song B", artist="B"),
@@ -49,8 +47,6 @@ class TestMainCLI:
     @patch("zhuk.main.get_track")
     @patch("zhuk.main.download_track")
     def test_custom_output_dir_passed_through(self, mock_download, mock_get_track):
-        from zhuk.spotify import TrackInfo
-
         mock_get_track.return_value = TrackInfo(title="Song", artist="Artist")
         mock_download.return_value = "/my_dir/Song.mp3"
 

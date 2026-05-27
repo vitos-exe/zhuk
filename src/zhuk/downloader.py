@@ -28,21 +28,7 @@ def write_id3_tags(mp3_path: str, track: TrackInfo) -> None:
 
 
 def download_track(track: TrackInfo, output_dir: str = _DEFAULT_OUTPUT_DIR) -> str:
-    """Search YouTube for *track* and download the best match as an MP3.
-
-    Parameters
-    ----------
-    track:
-        Metadata for the song to download.
-    output_dir:
-        Directory where the MP3 file will be saved.  Created automatically
-        if it does not already exist.
-
-    Returns
-    -------
-    str
-        Absolute path to the downloaded MP3 file.
-    """
+    """Search YouTube for track and download as MP3; returns the absolute path."""
     os.makedirs(output_dir, exist_ok=True)
 
     output_template = os.path.join(output_dir, "%(title)s.%(ext)s")

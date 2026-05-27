@@ -1,7 +1,7 @@
 """Unit tests for zhuk.downloader."""
 
 import os
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import mutagen.id3
 
@@ -12,7 +12,6 @@ from zhuk.spotify import TrackInfo
 class TestWriteId3Tags:
     def test_writes_title_artist_album(self, tmp_path):
         mp3_path = str(tmp_path / "song.mp3")
-        # Create a minimal valid MP3 file with an ID3 header
         tags = mutagen.id3.ID3()
         tags.save(mp3_path)
 
@@ -38,8 +37,6 @@ class TestWriteId3Tags:
         assert "TALB" not in saved
 
     def test_creates_id3_header_if_missing(self, tmp_path):
-        mp3_path = str(tmp_path / "song.mp3")
-        # Write a file with no ID3 header at all
         mp3_path_obj = tmp_path / "song.mp3"
         mp3_path_obj.write_bytes(b"\xff\xfb\x90\x00" * 10)
 
@@ -50,7 +47,6 @@ class TestWriteId3Tags:
         assert str(saved["TIT2"]) == "Song"
         assert str(saved["TPE1"]) == "Artist"
         assert str(saved["TALB"]) == "Album"
-
 
 
 class TestDownloadTrack:

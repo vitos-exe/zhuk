@@ -22,7 +22,11 @@ class TrackInfo:
 
 
 def build_client(client_id: str | None = None, redirect_uri: str | None = None) -> spotipy.Spotify:
-    auth_manager = SpotifyPKCE(client_id=client_id, redirect_uri=redirect_uri, scope=["playlist-read-private", "playlist-read-collaborative"])
+    auth_manager = SpotifyPKCE(
+        client_id=client_id,
+        redirect_uri=redirect_uri,
+        scope=["playlist-read-private", "playlist-read-collaborative"],
+    )
     return spotipy.Spotify(auth_manager=auth_manager)
 
 
@@ -46,7 +50,7 @@ def get_playlist(url: str, client_id: str | None = None, redirect_uri: str | Non
     results = sp.playlist_tracks(url)
     while results:
         for item in results["items"]:
-            track = item.get("item")
+            track = item.get("track")
             if track is None:
                 continue
             title = track["name"]

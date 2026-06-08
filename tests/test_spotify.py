@@ -64,7 +64,7 @@ class TestGetPlaylist:
     def _make_page(self, track_names, next_url=None):
         items = [
             {
-                "track": {
+                "item": {
                     "name": name,
                     "artists": [{"name": f"Artist{i}"}],
                     "album": {"name": f"Album{i}"},
@@ -94,9 +94,9 @@ class TestGetPlaylist:
         mock_sp = MagicMock()
         mock_sp.playlist_tracks.return_value = {
             "items": [
-                {"track": None},
+                {"item": None},
                 {
-                    "track": {
+                    "item": {
                         "name": "Real Song",
                         "artists": [{"name": "Artist"}],
                         "album": {"name": "Real Album"},

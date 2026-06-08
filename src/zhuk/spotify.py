@@ -50,7 +50,7 @@ def get_playlist(url: str, client_id: str | None = None, redirect_uri: str | Non
     results = sp.playlist_tracks(url)
     while results:
         for item in results["items"]:
-            track = item.get("track")
+            track = item.get("item")
             if track is None:
                 continue
             title = track["name"]

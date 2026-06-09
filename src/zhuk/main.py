@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 
 import click
+from yt_dlp.utils import DownloadError
 
 from zhuk.downloader import download_track, download_tracks
 from zhuk.spotify import get_playlist, get_track
@@ -41,14 +42,22 @@ def download(ctx, url, output):
         track = get_track(url, client_id=client_id, redirect_uri=redirect_uri)
         assert track is not None
         print(f"Downloading: {track.search_query()}")
-        path = download_track(track, output_dir=output)
+        try:
+            path = download_track(track, output_dir=output)
+        except DownloadError as exc:
+            print(f"Error downloading from YouTube: {exc}", file=sys.stderr)
+            sys.exit(1)
         print(f"  ✓ {path}")
     elif PLAYLIST_URL_HINT in url:
         print("Fetching playlist from Spotify…")
         tracks = get_playlist(url, client_id=client_id, redirect_uri=redirect_uri)
         print(f"Found {len(tracks)} track(s) in playlist.")
         print("Starting download…")
-        paths = download_tracks(tracks, output_dir=output)
+        try:
+            paths = download_tracks(tracks, output_dir=output)
+        except DownloadError as exc:
+            print(f"Error downloading from YouTube: {exc}", file=sys.stderr)
+            sys.exit(1)
         for path in paths:
             print(f"  ✓ {path}")
     else:
@@ -65,4 +74,3 @@ cli.add_command(download)
 
 if __name__ == '__main__':
     cli()
-

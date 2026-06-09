@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import os
+import sys
 
 import mutagen.id3
 import yt_dlp
+from yt_dlp.utils import DownloadError
 
 from zhuk.spotify import TrackInfo
 
@@ -27,7 +29,7 @@ def write_id3_tags(mp3_path: str, track: TrackInfo) -> None:
     tags.save(mp3_path)
 
 
-def download_track(track: TrackInfo, output_dir: str = _DEFAULT_OUTPUT_DIR) -> str:
+def download_track(track: TrackInfo, output_dir: str = _DEFAULT_OUTPUT_DIR) -> str | None:
     """Search YouTube for track and download as MP3; returns the absolute path."""
     os.makedirs(output_dir, exist_ok=True)
 
@@ -50,14 +52,18 @@ def download_track(track: TrackInfo, output_dir: str = _DEFAULT_OUTPUT_DIR) -> s
     }
 
     query = track.search_query()
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(query, download=True)
-        if "entries" in info:
-            info = info["entries"][0]
-        filename = ydl.prepare_filename(info)
-        # yt-dlp replaces the extension after post-processing
-        base, _ = os.path.splitext(filename)
-        mp3_path = base + ".mp3"
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(query, download=True)
+            if "entries" in info:
+                info = info["entries"][0]
+            filename = ydl.prepare_filename(info)
+            # yt-dlp replaces the extension after post-processing
+            base, _ = os.path.splitext(filename)
+            mp3_path = base + ".mp3"
+    except DownloadError as exc:
+        print(f"Error downloading '{query}': {exc}. Skipping.", file=sys.stderr)
+        return None
 
     mp3_path = os.path.abspath(mp3_path)
     write_id3_tags(mp3_path, track)
@@ -71,5 +77,7 @@ def download_tracks(
     paths: list[str] = []
     for track in tracks:
         path = download_track(track, output_dir=output_dir)
+        if path is None:
+            continue
         paths.append(path)
     return paths

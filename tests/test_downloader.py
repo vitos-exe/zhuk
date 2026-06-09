@@ -4,6 +4,7 @@ import os
 from unittest.mock import MagicMock, patch
 
 import mutagen.id3
+from yt_dlp.utils import DownloadError
 
 from zhuk.downloader import download_track, download_tracks, write_id3_tags
 from zhuk.spotify import TrackInfo
@@ -150,6 +151,23 @@ class TestDownloadTrack:
 
         mock_write_tags.assert_called_once_with(result, track)
 
+    @patch("zhuk.downloader.write_id3_tags")
+    @patch("zhuk.downloader.yt_dlp.YoutubeDL")
+    def test_returns_none_on_download_error(self, mock_ydl_cls, mock_write_tags, tmp_path, capsys):
+        track = TrackInfo(title="Song", artist="Artist")
+
+        mock_ydl = MagicMock()
+        mock_ydl.extract_info.side_effect = DownloadError("Video unavailable")
+        mock_ydl_cls.return_value.__enter__ = lambda s: mock_ydl
+        mock_ydl_cls.return_value.__exit__ = MagicMock(return_value=False)
+
+        result = download_track(track, output_dir=str(tmp_path))
+
+        assert result is None
+        captured = capsys.readouterr()
+        assert "Error downloading 'Artist - Song': Video unavailable. Skipping." in captured.err
+        mock_write_tags.assert_not_called()
+
 
 class TestDownloadTracks:
     @patch("zhuk.downloader.download_track")
@@ -172,3 +190,15 @@ class TestDownloadTracks:
         paths = download_tracks([], output_dir=str(tmp_path))
         assert paths == []
         mock_download_track.assert_not_called()
+
+    @patch("zhuk.downloader.download_track")
+    def test_skips_failed_tracks(self, mock_download_track, tmp_path):
+        tracks = [
+            TrackInfo(title="Song A", artist="Artist A"),
+            TrackInfo(title="Song B", artist="Artist B"),
+        ]
+        mock_download_track.side_effect = ["/out/Song A.mp3", None]
+
+        paths = download_tracks(tracks, output_dir=str(tmp_path))
+
+        assert paths == ["/out/Song A.mp3"]

@@ -63,3 +63,26 @@ class TestMainCLI:
         _, kwargs = mock_download.call_args
         assert kwargs.get("output_dir").name == "my_dir"
 
+    @patch("zhuk.main.get_track")
+    @patch("zhuk.main.download_track")
+    def test_track_download_error_is_skipped(self, mock_download, mock_get_track):
+        mock_get_track.return_value = TrackInfo(title="Song", artist="Artist")
+        mock_download.return_value = None
+
+        runner = CliRunner()
+        result = runner.invoke(cli, ['download', 'https://open.spotify.com/track/abc123'])
+
+        assert result.exit_code == 0
+        assert "✓" not in result.output
+
+    @patch("zhuk.main.get_playlist")
+    @patch("zhuk.main.download_tracks")
+    def test_playlist_download_error_is_skipped(self, mock_download, mock_get_playlist):
+        mock_get_playlist.return_value = [TrackInfo(title="Song A", artist="A")]
+        mock_download.return_value = []
+
+        runner = CliRunner()
+        result = runner.invoke(cli, ['download', 'https://open.spotify.com/playlist/pl123'])
+
+        assert result.exit_code == 0
+        assert "✓" not in result.output

@@ -1,4 +1,3 @@
-import sys
 from pathlib import Path
 
 import click
@@ -42,6 +41,8 @@ def download(ctx, url, output):
         assert track is not None
         print(f"Downloading: {track.search_query()}")
         path = download_track(track, output_dir=output)
+        if path is None:
+            return
         print(f"  ✓ {path}")
     elif PLAYLIST_URL_HINT in url:
         print("Fetching playlist from Spotify…")
@@ -65,4 +66,3 @@ cli.add_command(download)
 
 if __name__ == '__main__':
     cli()
-

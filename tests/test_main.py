@@ -75,6 +75,7 @@ class TestMainCLI:
 
         assert result.exit_code == 1
         assert "Error downloading from YouTube: Video unavailable" in result.stderr
+        assert "✓" not in result.output
 
     @patch("zhuk.main.get_playlist")
     @patch("zhuk.main.download_tracks")
@@ -87,3 +88,4 @@ class TestMainCLI:
 
         assert result.exit_code == 1
         assert "Error downloading from YouTube: Video unavailable" in result.stderr
+        assert "✓" not in result.output

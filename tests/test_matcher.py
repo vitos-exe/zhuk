@@ -1,10 +1,10 @@
 """Unit tests for zhuk.matcher."""
 
 import os
-from unittest.mock import MagicMock, patch
+from pathlib import Path
+from unittest.mock import patch
 
 import mutagen.id3
-import pytest
 
 from zhuk.matcher import (
     LocalTrack,
@@ -18,7 +18,7 @@ from zhuk.spotify import TrackInfo
 
 class TestScanMp3Files:
     def test_returns_empty_list_for_nonexistent_dir(self, tmp_path):
-        assert scan_mp3_files(str(tmp_path / "nonexistent")) == []
+        assert scan_mp3_files(tmp_path / "nonexistent") == []
 
     def test_returns_only_mp3_files(self, tmp_path):
         (tmp_path / "song1.mp3").touch()
@@ -27,7 +27,7 @@ class TestScanMp3Files:
         (tmp_path / "subdir").mkdir()
         (tmp_path / "subdir" / "song3.mp3").touch()
 
-        files = scan_mp3_files(str(tmp_path))
+        files = scan_mp3_files(tmp_path)
         assert len(files) == 2
         # Use basename for comparison since absolute paths might differ slightly
         basenames = [os.path.basename(f) for f in files]
@@ -37,7 +37,7 @@ class TestScanMp3Files:
 
 class TestReadId3Tags:
     def test_reads_tags_successfully(self, tmp_path):
-        mp3_path = str(tmp_path / "song.mp3")
+        mp3_path = tmp_path / "song.mp3"
         tags = mutagen.id3.ID3()
         tags["TIT2"] = mutagen.id3.TIT2(encoding=3, text="Title")
         tags["TPE1"] = mutagen.id3.TPE1(encoding=3, text="Artist")
@@ -47,10 +47,10 @@ class TestReadId3Tags:
         assert local_track is not None
         assert local_track.title == "Title"
         assert local_track.artist == "Artist"
-        assert local_track.filepath == mp3_path
+        assert local_track.filepath == str(mp3_path)
 
     def test_returns_none_if_tags_missing(self, tmp_path):
-        mp3_path = str(tmp_path / "song.mp3")
+        mp3_path = tmp_path / "song.mp3"
         with open(mp3_path, "wb") as f:
             f.write(b"not an mp3")
 
@@ -99,7 +99,7 @@ class TestFindMissingTracks:
             TrackInfo(title="Missing", artist="Artist"),
         ]
 
-        missing, matched = find_missing_tracks(spotify_tracks, "dir")
+        missing, matched = find_missing_tracks(spotify_tracks, Path("dir"))
 
         assert len(missing) == 1
         assert missing[0].title == "Missing"

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 import mutagen.id3
 from rapidfuzz import fuzz
@@ -24,23 +25,23 @@ class LocalTrack:
         return f"{self.artist} - {self.title}".lower().strip()
 
 
-def scan_mp3_files(directory: str) -> list[str]:
+def scan_mp3_files(directory: Path) -> list[Path]:
     """Return a list of MP3 file paths in the given directory (non-recursive)."""
-    if not os.path.exists(directory):
+    if not directory.exists():
         return []
 
-    mp3_files = []
+    mp3_files: list[Path] = []
     try:
         for filename in os.listdir(directory):
             if filename.lower().endswith(".mp3"):
-                mp3_files.append(os.path.join(directory, filename))
+                mp3_files.append(directory / filename)
     except (OSError, PermissionError):
         pass
 
     return mp3_files
 
 
-def read_id3_tags(filepath: str) -> LocalTrack | None:
+def read_id3_tags(filepath: Path) -> LocalTrack | None:
     """Read artist and title from ID3 tags; returns None if unreadable."""
     try:
         tags = mutagen.id3.ID3(filepath)
@@ -48,7 +49,7 @@ def read_id3_tags(filepath: str) -> LocalTrack | None:
         artist = str(tags.get("TPE1", [""])[0]) if "TPE1" in tags else ""
 
         if title and artist:
-            return LocalTrack(filepath=filepath, title=title, artist=artist)
+            return LocalTrack(filepath=str(filepath), title=title, artist=artist)
     except Exception:
         pass
 
@@ -82,14 +83,14 @@ def match_track(
 
 
 def find_missing_tracks(
-    spotify_tracks: list[TrackInfo], local_dir: str, threshold: int = 90
+    spotify_tracks: list[TrackInfo], local_dir: Path, threshold: int = 90
 ) -> tuple[list[TrackInfo], list[tuple[TrackInfo, LocalTrack]]]:
     """Return (missing_tracks, matched_tracks) by fuzzy-matching against local_dir."""
     mp3_files = scan_mp3_files(local_dir)
     local_tracks = [t for f in mp3_files if (t := read_id3_tags(f)) is not None]
 
-    missing_tracks = []
-    matched_tracks = []
+    missing_tracks: list[TrackInfo] = []
+    matched_tracks: list[tuple[TrackInfo, LocalTrack]] = []
 
     for spotify_track in spotify_tracks:
         match = match_track(spotify_track, local_tracks, threshold)

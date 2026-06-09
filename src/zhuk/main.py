@@ -31,7 +31,7 @@ def cli(ctx, client_id, redirect_uri):
         default=Path("downloads")
         )
 @click.pass_context
-def download(ctx, url, output):
+def download(ctx, url: str, output: Path):
     """
     Download a Spotify track or playlist via URL as MP3 from YouTube
     """
@@ -42,7 +42,7 @@ def download(ctx, url, output):
         track = get_track(url, client_id=client_id, redirect_uri=redirect_uri)
         assert track is not None
 
-        missing, matched = find_missing_tracks([track], str(output))
+        _, matched = find_missing_tracks([track], output)
         if matched:
             _, local = matched[0]
             print(f"Skipping (already exists): {track.search_query()}")
@@ -59,7 +59,7 @@ def download(ctx, url, output):
         tracks = get_playlist(url, client_id=client_id, redirect_uri=redirect_uri)
         print(f"Found {len(tracks)} track(s) in playlist.")
 
-        missing, matched = find_missing_tracks(tracks, str(output))
+        missing, matched = find_missing_tracks(tracks, output)
         if matched:
             print(f"Skipping {len(matched)} track(s) already in {output}:")
             for _, local in matched:

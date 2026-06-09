@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 import sys
 
 import mutagen.id3
@@ -11,7 +12,7 @@ from yt_dlp.utils import DownloadError
 
 from zhuk.spotify import TrackInfo
 
-_DEFAULT_OUTPUT_DIR = "downloads"
+DEFAULT_OUTPUT_DIR = Path("downloads")
 
 
 def write_id3_tags(mp3_path: str, track: TrackInfo) -> None:
@@ -29,7 +30,7 @@ def write_id3_tags(mp3_path: str, track: TrackInfo) -> None:
     tags.save(mp3_path)
 
 
-def download_track(track: TrackInfo, output_dir: str = _DEFAULT_OUTPUT_DIR) -> str | None:
+def download_track(track: TrackInfo, output_dir: Path = DEFAULT_OUTPUT_DIR) -> str | None:
     """Search YouTube for track and download as MP3; returns the absolute path."""
     os.makedirs(output_dir, exist_ok=True)
 
@@ -71,7 +72,7 @@ def download_track(track: TrackInfo, output_dir: str = _DEFAULT_OUTPUT_DIR) -> s
 
 
 def download_tracks(
-    tracks: list[TrackInfo], output_dir: str = _DEFAULT_OUTPUT_DIR
+    tracks: list[TrackInfo], output_dir: Path = DEFAULT_OUTPUT_DIR
 ) -> list[str]:
     """Download each track in *tracks* and return their MP3 paths."""
     paths: list[str] = []

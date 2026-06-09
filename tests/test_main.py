@@ -4,7 +4,6 @@ import os
 from unittest.mock import patch
 
 from click.testing import CliRunner
-from yt_dlp.utils import DownloadError
 
 from zhuk.main import cli
 from zhuk.spotify import TrackInfo
@@ -66,26 +65,24 @@ class TestMainCLI:
 
     @patch("zhuk.main.get_track")
     @patch("zhuk.main.download_track")
-    def test_track_download_error_exits_cleanly(self, mock_download, mock_get_track):
+    def test_track_download_error_is_skipped(self, mock_download, mock_get_track):
         mock_get_track.return_value = TrackInfo(title="Song", artist="Artist")
-        mock_download.side_effect = DownloadError("Video unavailable")
+        mock_download.return_value = None
 
         runner = CliRunner()
         result = runner.invoke(cli, ['download', 'https://open.spotify.com/track/abc123'])
 
-        assert result.exit_code == 1
-        assert "Error downloading from YouTube: Video unavailable" in result.stderr
+        assert result.exit_code == 0
         assert "✓" not in result.output
 
     @patch("zhuk.main.get_playlist")
     @patch("zhuk.main.download_tracks")
-    def test_playlist_download_error_exits_cleanly(self, mock_download, mock_get_playlist):
+    def test_playlist_download_error_is_skipped(self, mock_download, mock_get_playlist):
         mock_get_playlist.return_value = [TrackInfo(title="Song A", artist="A")]
-        mock_download.side_effect = DownloadError("Video unavailable")
+        mock_download.return_value = []
 
         runner = CliRunner()
         result = runner.invoke(cli, ['download', 'https://open.spotify.com/playlist/pl123'])
 
-        assert result.exit_code == 1
-        assert "Error downloading from YouTube: Video unavailable" in result.stderr
+        assert result.exit_code == 0
         assert "✓" not in result.output

@@ -1,8 +1,10 @@
+import sys
 from pathlib import Path
 
 import click
 
 from zhuk.downloader import download_track, download_tracks
+from zhuk.matcher import find_missing_tracks
 from zhuk.spotify import get_playlist, get_track
 
 TRACK_URL_HINT = "open.spotify.com/track/"
@@ -29,7 +31,7 @@ def cli(ctx, client_id, redirect_uri):
         default=Path("downloads")
         )
 @click.pass_context
-def download(ctx, url, output):
+def download(ctx, url: str, output: Path):
     """
     Download a Spotify track or playlist via URL as MP3 from YouTube
     """
@@ -39,6 +41,14 @@ def download(ctx, url, output):
         print("Fetching track from Spotify…")
         track = get_track(url, client_id=client_id, redirect_uri=redirect_uri)
         assert track is not None
+
+        _, matched = find_missing_tracks([track], output)
+        if matched:
+            _, local = matched[0]
+            print(f"Skipping (already exists): {track.search_query()}")
+            print(f"  ✓ {local.filepath}")
+            return
+
         print(f"Downloading: {track.search_query()}")
         path = download_track(track, output_dir=output)
         if path is None:
@@ -48,8 +58,19 @@ def download(ctx, url, output):
         print("Fetching playlist from Spotify…")
         tracks = get_playlist(url, client_id=client_id, redirect_uri=redirect_uri)
         print(f"Found {len(tracks)} track(s) in playlist.")
-        print("Starting download…")
-        paths = download_tracks(tracks, output_dir=output)
+
+        missing, matched = find_missing_tracks(tracks, output)
+        if matched:
+            print(f"Skipping {len(matched)} track(s) already in {output}:")
+            for _, local in matched:
+                print(f"  ✓ {local.filepath}")
+
+        if not missing:
+            print("All tracks already downloaded.")
+            return
+
+        print(f"Starting download of {len(missing)} missing track(s)…")
+        paths = download_tracks(missing, output_dir=output)
         for path in paths:
             print(f"  ✓ {path}")
     else:

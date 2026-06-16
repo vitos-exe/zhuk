@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import os
 from pathlib import Path
 import sys
@@ -13,6 +14,7 @@ from yt_dlp.utils import DownloadError
 from zhuk.spotify import TrackInfo
 
 DEFAULT_OUTPUT_DIR = Path("downloads")
+DEFAULT_MAX_WORKERS = 4
 
 
 def write_id3_tags(mp3_path: str, track: TrackInfo) -> None:
@@ -72,13 +74,22 @@ def download_track(track: TrackInfo, output_dir: Path = DEFAULT_OUTPUT_DIR) -> s
 
 
 def download_tracks(
-    tracks: list[TrackInfo], output_dir: Path = DEFAULT_OUTPUT_DIR
+    tracks: list[TrackInfo],
+    output_dir: Path = DEFAULT_OUTPUT_DIR,
+    max_workers: int = DEFAULT_MAX_WORKERS,
 ) -> list[str]:
-    """Download each track in *tracks* and return their MP3 paths."""
-    paths: list[str] = []
-    for track in tracks:
-        path = download_track(track, output_dir=output_dir)
-        if path is None:
-            continue
-        paths.append(path)
-    return paths
+    """Download each track in *tracks* concurrently and return their MP3 paths.
+
+    Downloads run on a thread pool of *max_workers* threads since each download
+    is I/O bound. Results preserve the order of *tracks*; tracks that failed to
+    download are skipped.
+    """
+    if not tracks:
+        return []
+
+    workers = max(1, min(max_workers, len(tracks)))
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        results = executor.map(
+            lambda track: download_track(track, output_dir=output_dir), tracks
+        )
+        return [path for path in results if path is not None]

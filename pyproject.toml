@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "zhuk"
-version = "1.1.5"
+version = "1.2.0"
 description = "Download Spotify tracks and playlists as MP3 from YouTube"
 requires-python = ">=3.10"
 dependencies = [

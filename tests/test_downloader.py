@@ -176,7 +176,7 @@ class TestDownloadTracks:
             TrackInfo(title="Song A", artist="Artist A"),
             TrackInfo(title="Song B", artist="Artist B"),
         ]
-        mock_download_track.side_effect = ["/out/Song A.mp3", "/out/Song B.mp3"]
+        mock_download_track.side_effect = lambda track, output_dir: f"/out/{track.title}.mp3"
 
         paths = download_tracks(tracks, output_dir=str(tmp_path))
 
@@ -197,8 +197,29 @@ class TestDownloadTracks:
             TrackInfo(title="Song A", artist="Artist A"),
             TrackInfo(title="Song B", artist="Artist B"),
         ]
-        mock_download_track.side_effect = ["/out/Song A.mp3", None]
+        failed = {"Song B"}
+        mock_download_track.side_effect = (
+            lambda track, output_dir: None if track.title in failed else f"/out/{track.title}.mp3"
+        )
 
         paths = download_tracks(tracks, output_dir=str(tmp_path))
+
+        assert paths == ["/out/Song A.mp3"]
+
+    @patch("zhuk.downloader.download_track")
+    def test_preserves_order_with_parallel_workers(self, mock_download_track, tmp_path):
+        tracks = [TrackInfo(title=f"Song {i}", artist="Artist") for i in range(10)]
+        mock_download_track.side_effect = lambda track, output_dir: f"/out/{track.title}.mp3"
+
+        paths = download_tracks(tracks, output_dir=str(tmp_path), max_workers=4)
+
+        assert paths == [f"/out/Song {i}.mp3" for i in range(10)]
+
+    @patch("zhuk.downloader.download_track")
+    def test_caps_workers_to_track_count(self, mock_download_track, tmp_path):
+        tracks = [TrackInfo(title="Song A", artist="Artist A")]
+        mock_download_track.side_effect = lambda track, output_dir: f"/out/{track.title}.mp3"
+
+        paths = download_tracks(tracks, output_dir=str(tmp_path), max_workers=8)
 
         assert paths == ["/out/Song A.mp3"]

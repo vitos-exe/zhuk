@@ -3,7 +3,7 @@ from pathlib import Path
 
 import click
 
-from zhuk.downloader import download_track, download_tracks
+from zhuk.downloader import DEFAULT_MAX_WORKERS, download_track, download_tracks
 from zhuk.matcher import find_missing_tracks
 from zhuk.spotify import get_playlist, get_track
 
@@ -30,8 +30,15 @@ def cli(ctx, client_id, redirect_uri):
         type=click.Path(file_okay=False, resolve_path=True, writable=True, path_type=Path),
         default=Path("downloads")
         )
+@click.option(
+        '-j',
+        '--jobs',
+        help="Number of tracks to download in parallel (default: 4)",
+        type=click.IntRange(min=1),
+        default=DEFAULT_MAX_WORKERS,
+        )
 @click.pass_context
-def download(ctx, url: str, output: Path):
+def download(ctx, url: str, output: Path, jobs: int):
     """
     Download a Spotify track or playlist via URL as MP3 from YouTube
     """
@@ -70,7 +77,7 @@ def download(ctx, url: str, output: Path):
             return
 
         print(f"Starting download of {len(missing)} missing track(s)…")
-        paths = download_tracks(missing, output_dir=output)
+        paths = download_tracks(missing, output_dir=output, max_workers=jobs)
         for path in paths:
             print(f"  ✓ {path}")
     else:

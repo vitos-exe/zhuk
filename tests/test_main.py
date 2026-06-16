@@ -111,7 +111,9 @@ class TestMainCLI:
 
         assert "Skipping 1 track(s) already in" in result.output
         assert "Starting download of 1 missing track(s)" in result.output
-        mock_download.assert_called_once_with(missing, output_dir=Path("downloads").resolve())
+        mock_download.assert_called_once_with(
+            missing, output_dir=Path("downloads").resolve(), max_workers=4
+        )
 
     @patch("zhuk.main.get_playlist")
     @patch("zhuk.main.find_missing_tracks")

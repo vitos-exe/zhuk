@@ -64,7 +64,7 @@ class TestGetPlaylist:
     def _make_page(self, track_names, next_url=None):
         items = [
             {
-                "item": {
+                "track": {
                     "name": name,
                     "artists": [{"name": f"Artist{i}"}],
                     "album": {"name": f"Album{i}"},
@@ -77,7 +77,7 @@ class TestGetPlaylist:
     @patch("zhuk.spotify.build_client")
     def test_single_page(self, mock_build):
         mock_sp = MagicMock()
-        mock_sp.playlist_tracks.return_value = self._make_page(["Song A", "Song B"])
+        mock_sp.playlist_items.return_value = self._make_page(["Song A", "Song B"])
         mock_sp.next.return_value = None
         mock_build.return_value = mock_sp
 
@@ -92,11 +92,11 @@ class TestGetPlaylist:
     @patch("zhuk.spotify.build_client")
     def test_skips_null_tracks(self, mock_build):
         mock_sp = MagicMock()
-        mock_sp.playlist_tracks.return_value = {
+        mock_sp.playlist_items.return_value = {
             "items": [
-                {"item": None},
+                {"track": None},
                 {
-                    "item": {
+                    "track": {
                         "name": "Real Song",
                         "artists": [{"name": "Artist"}],
                         "album": {"name": "Real Album"},
@@ -119,7 +119,7 @@ class TestGetPlaylist:
         page1 = self._make_page(["Song 1", "Song 2"], next_url="next_url")
         page2 = self._make_page(["Song 3"])
         mock_sp = MagicMock()
-        mock_sp.playlist_tracks.return_value = page1
+        mock_sp.playlist_items.return_value = page1
         mock_sp.next.return_value = page2
         mock_build.return_value = mock_sp
 
@@ -137,3 +137,108 @@ class TestBuildClient:
 
         with pytest.raises(SpotifyOauthError, match="SPOTIPY_CLIENT_ID"):
             build_client()
+
+
+class TestListPlaylists:
+    @staticmethod
+    def _page(names, next_url=None):
+        return {
+            "items": [
+                {"id": f"id{i}", "name": name, "tracks": {"total": i + 1}}
+                for i, name in enumerate(names)
+            ],
+            "next": next_url,
+        }
+
+    @patch("zhuk.spotify.build_client")
+    def test_single_page(self, mock_build):
+        from zhuk.spotify import list_playlists
+
+        mock_sp = MagicMock()
+        mock_sp.current_user_playlists.return_value = self._page(["House", "Techno"])
+        mock_sp.next.return_value = None
+        mock_build.return_value = mock_sp
+
+        playlists = list_playlists()
+
+        assert [p.name for p in playlists] == ["House", "Techno"]
+        assert playlists[0].track_count == 1
+
+    @patch("zhuk.spotify.build_client")
+    def test_paginates(self, mock_build):
+        from zhuk.spotify import list_playlists
+
+        mock_sp = MagicMock()
+        mock_sp.current_user_playlists.return_value = self._page(["A"], next_url="more")
+        mock_sp.next.return_value = self._page(["B"])
+        mock_build.return_value = mock_sp
+
+        assert [p.name for p in list_playlists()] == ["A", "B"]
+
+    @patch("zhuk.spotify.build_client")
+    def test_skips_entries_without_id(self, mock_build):
+        from zhuk.spotify import list_playlists
+
+        mock_sp = MagicMock()
+        mock_sp.current_user_playlists.return_value = {
+            "items": [None, {"name": "no id"}, {"id": "ok", "name": "Fine"}],
+            "next": None,
+        }
+        mock_sp.next.return_value = None
+        mock_build.return_value = mock_sp
+
+        assert [p.id for p in list_playlists()] == ["ok"]
+
+    def test_reuses_supplied_client(self):
+        from zhuk.spotify import list_playlists
+
+        mock_sp = MagicMock()
+        mock_sp.current_user_playlists.return_value = {"items": [], "next": None}
+
+        with patch("zhuk.spotify.build_client") as mock_build:
+            list_playlists(sp=mock_sp)
+
+        mock_build.assert_not_called()
+
+
+class TestTrackIdentifiers:
+    @patch("zhuk.spotify.build_client")
+    def test_get_track_captures_id_and_isrc(self, mock_build):
+        mock_sp = MagicMock()
+        mock_sp.track.return_value = {
+            "name": "Song",
+            "artists": [{"name": "Artist"}],
+            "album": {"name": "Album"},
+            "id": "spid",
+            "external_ids": {"isrc": "GBAAA0000001"},
+        }
+        mock_build.return_value = mock_sp
+
+        track = get_track("https://open.spotify.com/track/spid")
+
+        assert track.spotify_id == "spid"
+        assert track.isrc == "GBAAA0000001"
+
+    @patch("zhuk.spotify.build_client")
+    def test_get_playlist_accepts_legacy_item_key(self, mock_build):
+        # Older code in this repo read "item"; the API uses "track". Accept both.
+        mock_sp = MagicMock()
+        mock_sp.playlist_items.return_value = {
+            "items": [
+                {
+                    "item": {
+                        "name": "Legacy",
+                        "artists": [{"name": "Artist"}],
+                        "album": {"name": "Album"},
+                        "id": "legacy",
+                    }
+                }
+            ],
+            "next": None,
+        }
+        mock_sp.next.return_value = None
+        mock_build.return_value = mock_sp
+
+        tracks = get_playlist("https://open.spotify.com/playlist/x")
+
+        assert [t.title for t in tracks] == ["Legacy"]

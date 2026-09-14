@@ -35,8 +35,12 @@ You can create a free Spotify application at <https://developer.spotify.com/dash
 ## Usage
 
 ```
-zhuk download <spotify-url> [--output DIR]
+zhuk download <spotify-url> [--output DIR] [--jobs N]
+zhuk sync [--output DIR] [--select | --all | --playlist NAME]
 ```
+
+Tracks already present in the target directory are skipped, and downloads run four at a
+time by default (`--jobs`).
 
 ### Download a single track
 
@@ -57,6 +61,51 @@ zhuk download https://open.spotify.com/track/4u7EnebtmKWzUH433cf5Qv --output ~/M
 ```
 
 MP3 files are saved to the `downloads/` directory by default.
+
+## Syncing playlists to a device
+
+`zhuk sync` is built for keeping a DJ library in step with Spotify. It lists the playlists on
+your account, lets you pick them interactively (type to search, space to toggle), and mirrors
+each one into its own subfolder of the target directory.
+
+```bash
+zhuk sync --output /Volumes/USB/Music
+```
+
+The first run opens the picker and remembers your choice in `<output>/.zhuk.json`. Later runs
+need no interaction:
+
+```bash
+zhuk sync --output /Volumes/USB/Music          # sync the same playlists again
+zhuk sync --output /Volumes/USB/Music --select # change the selection
+zhuk sync --output /Volumes/USB/Music --all    # sync every playlist
+zhuk sync --output /Volumes/USB/Music --playlist "Deep House" --playlist Techno
+```
+
+Each playlist folder also gets an `.m3u8` file listing the tracks in Spotify order, using
+relative paths so the folder keeps working after you copy it to a USB stick. Pass
+`--no-playlist-file` to skip it.
+
+### Sync deletes local files
+
+**`zhuk sync` is a mirror, not a one-way download.** Any file in a playlist subfolder that is
+not currently in that playlist is deleted, including files that are not MP3s. Dotfiles and
+`.m3u8` files are never touched.
+
+Tracks are identified by a Spotify track ID embedded in each MP3 on download. Files downloaded
+by older versions of `zhuk` do not carry that ID, so **the first sync of an existing library
+treats them as unknown and re-downloads everything.**
+
+Three safeguards apply before anything is removed:
+
+- The full list of files to be deleted is printed and you must confirm. Use `--yes` to skip the
+  prompt in scripts.
+- If a sync would delete 80% or more of a folder, it refuses outright and skips that playlist.
+  That usually means a wrong `--output` path or an empty API response. Use `--force` to
+  override.
+- `--dry-run` reports everything that would change without touching a single file.
+
+Start with `--dry-run` the first time you point `zhuk sync` at a real library.
 
 ## How it works
 

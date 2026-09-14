@@ -106,3 +106,93 @@ class TestFindMissingTracks:
         assert len(matched) == 1
         assert matched[0][0].title == "Matched"
         assert matched[0][1].filepath == "song1.mp3"
+
+
+class TestIsProtected:
+    def test_dotfiles_and_playlists_are_protected(self, tmp_path):
+        from zhuk.matcher import is_protected
+
+        assert is_protected(tmp_path / ".DS_Store")
+        assert is_protected(tmp_path / ".zhuk.json")
+        assert is_protected(tmp_path / "Set.m3u8")
+        assert is_protected(tmp_path / "Set.M3U8")
+        assert not is_protected(tmp_path / "song.mp3")
+
+
+class TestScanSyncFiles:
+    def test_excludes_protected_and_directories(self, tmp_path):
+        from zhuk.matcher import scan_sync_files
+
+        (tmp_path / "song.mp3").touch()
+        (tmp_path / "notes.txt").touch()
+        (tmp_path / "Set.m3u8").touch()
+        (tmp_path / ".DS_Store").touch()
+        (tmp_path / "subdir").mkdir()
+
+        names = sorted(p.name for p in scan_sync_files(tmp_path))
+        # Mirror sync deletes unknown files, so non-MP3s are candidates too,
+        # but directories and protected files never are.
+        assert names == ["notes.txt", "song.mp3"]
+
+    def test_missing_directory(self, tmp_path):
+        from zhuk.matcher import scan_sync_files
+
+        assert scan_sync_files(tmp_path / "nope") == []
+
+
+class TestReadSpotifyId:
+    def test_reads_embedded_id(self, tmp_path, make_mp3):
+        from zhuk.matcher import read_spotify_id
+
+        path = make_mp3(tmp_path / "a.mp3", spotify_id="abc123")
+        assert read_spotify_id(path) == "abc123"
+
+    def test_returns_none_without_id(self, tmp_path, make_mp3):
+        from zhuk.matcher import read_spotify_id
+
+        path = make_mp3(tmp_path / "a.mp3", spotify_id=None)
+        assert read_spotify_id(path) is None
+
+    def test_returns_none_for_unreadable_file(self, tmp_path):
+        from zhuk.matcher import read_spotify_id
+
+        path = tmp_path / "broken.mp3"
+        path.write_text("not an mp3")
+        assert read_spotify_id(path) is None
+
+
+class TestIndexBySpotifyId:
+    def test_splits_identified_and_unidentified(self, tmp_path, make_mp3):
+        from zhuk.matcher import index_by_spotify_id
+
+        make_mp3(tmp_path / "a.mp3", spotify_id="id1")
+        make_mp3(tmp_path / "b.mp3", spotify_id=None)
+
+        index, unidentified = index_by_spotify_id(tmp_path)
+
+        assert set(index) == {"id1"}
+        assert [p.name for p in unidentified] == ["b.mp3"]
+
+
+class TestDiffPlaylist:
+    def test_returns_missing_present_and_orphans(self, tmp_path, make_mp3):
+        from zhuk.matcher import diff_playlist
+
+        make_mp3(tmp_path / "a.mp3", spotify_id="id1")
+        make_mp3(tmp_path / "stale.mp3", spotify_id="old")
+
+        tracks = [TrackInfo("A", "X", spotify_id="id1"), TrackInfo("B", "Y", spotify_id="id2")]
+        missing, present, orphans = diff_playlist(tracks, tmp_path)
+
+        assert [t.spotify_id for t in missing] == ["id2"]
+        assert set(present) == {"id1"}
+        assert [p.name for p in orphans] == ["stale.mp3"]
+
+    def test_track_without_id_is_always_missing(self, tmp_path):
+        from zhuk.matcher import diff_playlist
+
+        missing, present, orphans = diff_playlist([TrackInfo("A", "X")], tmp_path)
+
+        assert len(missing) == 1
+        assert present == {}
+        assert orphans == []

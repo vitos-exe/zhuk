@@ -223,3 +223,106 @@ class TestDownloadTracks:
         paths = download_tracks(tracks, output_dir=str(tmp_path), max_workers=8)
 
         assert paths == ["/out/Song A.mp3"]
+
+
+class TestWriteIdentifierTags:
+    def test_writes_spotify_id_and_isrc(self, tmp_path):
+        from zhuk.downloader import write_id3_tags
+        from zhuk.spotify import TrackInfo
+
+        mp3_path = tmp_path / "song.mp3"
+        mp3_path.touch()
+
+        write_id3_tags(
+            str(mp3_path),
+            TrackInfo("Title", "Artist", spotify_id="spid", isrc="GBAAA0000001"),
+        )
+
+        tags = mutagen.id3.ID3(mp3_path)
+        assert str(tags["TXXX:SPOTIFY_TRACK_ID"].text[0]) == "spid"
+        assert str(tags["TSRC"].text[0]) == "GBAAA0000001"
+
+    def test_omits_identifier_frames_when_absent(self, tmp_path):
+        from zhuk.downloader import write_id3_tags
+        from zhuk.spotify import TrackInfo
+
+        mp3_path = tmp_path / "song.mp3"
+        mp3_path.touch()
+
+        write_id3_tags(str(mp3_path), TrackInfo("Title", "Artist"))
+
+        tags = mutagen.id3.ID3(mp3_path)
+        assert "TXXX:SPOTIFY_TRACK_ID" not in tags
+        assert "TSRC" not in tags
+
+
+class TestMetadataFilenames:
+    @patch("zhuk.downloader.write_id3_tags")
+    @patch("zhuk.downloader.yt_dlp.YoutubeDL")
+    def test_output_template_uses_metadata_not_video_title(
+        self, mock_ydl_cls, mock_write_tags, tmp_path
+    ):
+        from zhuk.downloader import download_track
+        from zhuk.spotify import TrackInfo
+
+        mock_ydl = MagicMock()
+        mock_ydl_cls.return_value.__enter__.return_value = mock_ydl
+        mock_ydl.extract_info.return_value = {"title": "Some Video (Official) 4K"}
+        mock_ydl.prepare_filename.return_value = str(tmp_path / "Some Video.webm")
+
+        download_track(TrackInfo("Da Funk", "Daft Punk"), output_dir=tmp_path)
+
+        opts = mock_ydl_cls.call_args[0][0]
+        assert opts["outtmpl"] == os.path.join(tmp_path, "Daft Punk - Da Funk.%(ext)s")
+
+    @patch("zhuk.downloader.write_id3_tags")
+    @patch("zhuk.downloader.yt_dlp.YoutubeDL")
+    def test_returns_metadata_path_when_it_exists(
+        self, mock_ydl_cls, mock_write_tags, tmp_path
+    ):
+        from zhuk.downloader import download_track
+        from zhuk.spotify import TrackInfo
+
+        expected = tmp_path / "Daft Punk - Da Funk.mp3"
+        expected.touch()
+
+        mock_ydl = MagicMock()
+        mock_ydl_cls.return_value.__enter__.return_value = mock_ydl
+        mock_ydl.extract_info.return_value = {"title": "whatever"}
+        mock_ydl.prepare_filename.return_value = str(tmp_path / "whatever.webm")
+
+        path = download_track(TrackInfo("Da Funk", "Daft Punk"), output_dir=tmp_path)
+
+        assert path == str(expected)
+
+    @patch("zhuk.downloader.write_id3_tags")
+    @patch("zhuk.downloader.yt_dlp.YoutubeDL")
+    def test_falls_back_to_prepare_filename(self, mock_ydl_cls, mock_write_tags, tmp_path):
+        from zhuk.downloader import download_track
+        from zhuk.spotify import TrackInfo
+
+        mock_ydl = MagicMock()
+        mock_ydl_cls.return_value.__enter__.return_value = mock_ydl
+        mock_ydl.extract_info.return_value = {"title": "whatever"}
+        mock_ydl.prepare_filename.return_value = str(tmp_path / "actual.webm")
+
+        path = download_track(TrackInfo("Da Funk", "Daft Punk"), output_dir=tmp_path)
+
+        assert path == str(tmp_path / "actual.mp3")
+
+    @patch("zhuk.downloader.write_id3_tags")
+    @patch("zhuk.downloader.yt_dlp.YoutubeDL")
+    def test_escapes_percent_in_metadata(self, mock_ydl_cls, mock_write_tags, tmp_path):
+        from zhuk.downloader import download_track
+        from zhuk.spotify import TrackInfo
+
+        mock_ydl = MagicMock()
+        mock_ydl_cls.return_value.__enter__.return_value = mock_ydl
+        mock_ydl.extract_info.return_value = {"title": "x"}
+        mock_ydl.prepare_filename.return_value = str(tmp_path / "x.webm")
+
+        download_track(TrackInfo("100% Pure", "Artist"), output_dir=tmp_path)
+
+        opts = mock_ydl_cls.call_args[0][0]
+        # A literal % would otherwise be read as a yt-dlp template field.
+        assert "100%% Pure" in opts["outtmpl"]

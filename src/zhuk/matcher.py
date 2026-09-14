@@ -100,3 +100,103 @@ def find_missing_tracks(
             missing_tracks.append(spotify_track)
 
     return missing_tracks, matched_tracks
+
+
+SPOTIFY_ID_DESC = "SPOTIFY_TRACK_ID"
+
+# Files the sync itself produces, or that belong to the OS. Under mirror
+# semantics everything else in a playlist folder is a deletion candidate.
+PROTECTED_SUFFIXES = (".m3u8",)
+
+
+def is_protected(path: Path) -> bool:
+    """Return True if *path* must never be treated as an orphan."""
+    name = path.name
+    if name.startswith("."):
+        return True
+    return name.lower().endswith(PROTECTED_SUFFIXES)
+
+
+def scan_sync_files(directory: Path) -> list[Path]:
+    """Return deletable files in *directory* (non-recursive, protected excluded).
+
+    Directories are never returned: mirror sync deletes files it does not
+    recognise, and recursing into unknown folders is not worth the risk.
+    """
+    if not directory.exists():
+        return []
+
+    files: list[Path] = []
+    try:
+        for filename in sorted(os.listdir(directory)):
+            path = directory / filename
+            if not path.is_file() or is_protected(path):
+                continue
+            files.append(path)
+    except (OSError, PermissionError):
+        pass
+
+    return files
+
+
+def read_spotify_id(filepath: Path) -> str | None:
+    """Read the embedded Spotify track ID from *filepath*, or None."""
+    try:
+        tags = mutagen.id3.ID3(filepath)
+        frame = tags.get(f"TXXX:{SPOTIFY_ID_DESC}")
+        if frame is not None and frame.text:
+            value = str(frame.text[0]).strip()
+            return value or None
+    except Exception:
+        pass
+
+    return None
+
+
+def index_by_spotify_id(directory: Path) -> tuple[dict[str, Path], list[Path]]:
+    """Index *directory* by embedded Spotify track ID.
+
+    Returns ``(index, unidentified)`` where *unidentified* holds deletable files
+    carrying no readable Spotify ID.
+    """
+    index: dict[str, Path] = {}
+    unidentified: list[Path] = []
+
+    for path in scan_sync_files(directory):
+        spotify_id = read_spotify_id(path)
+        if spotify_id is None:
+            unidentified.append(path)
+        else:
+            index.setdefault(spotify_id, path)
+
+    return index, unidentified
+
+
+def diff_playlist(
+    spotify_tracks: list[TrackInfo], directory: Path
+) -> tuple[list[TrackInfo], dict[str, Path], list[Path]]:
+    """Compare *spotify_tracks* against *directory* by embedded Spotify ID.
+
+    Returns ``(missing, present, orphans)``: tracks to download, a map of
+    Spotify ID to the local file already holding it, and local files that no
+    longer belong to the playlist.
+    """
+    index, unidentified = index_by_spotify_id(directory)
+
+    wanted_ids = {t.spotify_id for t in spotify_tracks if t.spotify_id}
+
+    missing: list[TrackInfo] = []
+    present: dict[str, Path] = {}
+    for track in spotify_tracks:
+        local = index.get(track.spotify_id) if track.spotify_id else None
+        if local is None:
+            missing.append(track)
+        else:
+            present[track.spotify_id] = local
+
+    # Files with an ID that is no longer in the playlist, plus every file we
+    # cannot identify at all.
+    orphans = [path for spotify_id, path in index.items() if spotify_id not in wanted_ids]
+    orphans.extend(unidentified)
+
+    return missing, present, sorted(set(orphans))

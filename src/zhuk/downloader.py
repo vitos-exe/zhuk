@@ -11,14 +11,17 @@ import mutagen.id3
 import yt_dlp
 from yt_dlp.utils import DownloadError
 
+from zhuk.naming import track_basename
 from zhuk.spotify import TrackInfo
 
 DEFAULT_OUTPUT_DIR = Path("downloads")
 DEFAULT_MAX_WORKERS = 4
 
+SPOTIFY_ID_DESC = "SPOTIFY_TRACK_ID"
+
 
 def write_id3_tags(mp3_path: str, track: TrackInfo) -> None:
-    """Embed ID3 title, artist and album tags into an MP3 file."""
+    """Embed ID3 title, artist, album and identifier tags into an MP3 file."""
     try:
         tags = mutagen.id3.ID3(mp3_path)
     except mutagen.id3.ID3NoHeaderError:
@@ -28,6 +31,14 @@ def write_id3_tags(mp3_path: str, track: TrackInfo) -> None:
     tags["TPE1"] = mutagen.id3.TPE1(encoding=3, text=track.artist)
     if track.album:
         tags["TALB"] = mutagen.id3.TALB(encoding=3, text=track.album)
+    if track.spotify_id:
+        # Sync identity lives here: it survives renames and tag editors leave
+        # unknown TXXX frames alone.
+        tags[f"TXXX:{SPOTIFY_ID_DESC}"] = mutagen.id3.TXXX(
+            encoding=3, desc=SPOTIFY_ID_DESC, text=track.spotify_id
+        )
+    if track.isrc:
+        tags["TSRC"] = mutagen.id3.TSRC(encoding=3, text=track.isrc)
 
     tags.save(mp3_path)
 
@@ -36,7 +47,11 @@ def download_track(track: TrackInfo, output_dir: Path = DEFAULT_OUTPUT_DIR) -> s
     """Search YouTube for track and download as MP3; returns the absolute path."""
     os.makedirs(output_dir, exist_ok=True)
 
-    output_template = os.path.join(output_dir, "%(title)s.%(ext)s")
+    # Name the file from Spotify metadata rather than the YouTube video title so
+    # the same track always lands at the same path across runs.
+    basename = track_basename(track.artist, track.title)
+    template_base = basename.replace("%", "%%")
+    output_template = os.path.join(output_dir, f"{template_base}.%(ext)s")
 
     ydl_opts = {
         "format": "bestaudio/best",
@@ -60,10 +75,12 @@ def download_track(track: TrackInfo, output_dir: Path = DEFAULT_OUTPUT_DIR) -> s
             info = ydl.extract_info(query, download=True)
             if "entries" in info:
                 info = info["entries"][0]
-            filename = ydl.prepare_filename(info)
-            # yt-dlp replaces the extension after post-processing
-            base, _ = os.path.splitext(filename)
-            mp3_path = base + ".mp3"
+            mp3_path = os.path.join(output_dir, f"{basename}.mp3")
+            if not os.path.exists(mp3_path):
+                # Fall back to whatever yt-dlp actually wrote.
+                filename = ydl.prepare_filename(info)
+                base, _ = os.path.splitext(filename)
+                mp3_path = base + ".mp3"
     except DownloadError as exc:
         print(f"Error downloading '{query}': {exc}. Skipping.", file=sys.stderr)
         return None
